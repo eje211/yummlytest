@@ -1,40 +1,44 @@
+/**
+  * Defines the grammar of the query language of the Yummly exercise and the object to parse the actual query.
+  *
+  * @author Emmanuel Eytan
+  */
+
 package com.regularoddity.yummly
 
-import scala.util.parsing.combinator.{Parsers, RegexParsers}
+import scala.util.parsing.combinator.Parsers
 import scala.util.parsing.input.{NoPosition, Position, Positional, Reader}
 
-trait WorkflowCompilationError
-case class WorkflowLexerError(msg: String) extends WorkflowCompilationError
+case class ParserLexerError(message: String) extends YummlyException
 
-sealed trait ParserToken extends Positional
+sealed trait QueryParserAST extends Positional
+sealed trait QueryItemAST extends QueryParserAST
 
-case class OrToken() extends ParserToken
-case class AndToken() extends ParserToken
-case class OpenParenToken() extends  ParserToken
-case class CloseParenToken() extends  ParserToken
-case class InputToken(token: String) extends ParserToken
+/**
+  * An individual token, part of a stored collection.
+  * @param token The value of the token.
+  */
+case class Token(token: String) extends QueryItemAST
 
-object WorkflowLexer extends RegexParsers {
-  override def skipWhitespace: Boolean = true
+/**
+  * A pending "or" or "and" operation.
+  * @param content The pending operation.
+  */
+case class Group(content: QueryParserAST) extends QueryItemAST
 
-  def token: Parser[InputToken] =
-    "[a-z][a-z]*".r ^^ { str => InputToken(str) }
+/**
+  * A pending "and" (intersect) operation.
+  * @param arg1 The first argument of the intersection.
+  * @param arg2 The second argument of the intersection.
+  */
+case class And(arg1: QueryItemAST, arg2: QueryItemAST) extends QueryParserAST
 
-  def or: Parser[OrToken] = "|" ^^ {_ => OrToken()}
-  def and: Parser[AndToken] = "&" ^^ {_ => AndToken()}
-  def openParen: Parser[OpenParenToken] = "(" ^^ {_ => OpenParenToken()}
-  def closeParen: Parser[CloseParenToken] = ")" ^^ {_ => CloseParenToken()}
-
-  def tokens: Parser[List[ParserToken]] =
-    phrase(rep1(token | closeParen | openParen | and | or))
-
-  def apply(query: String): Either[WorkflowLexerError, List[ParserToken]] = parse(tokens, query) match {
-    case NoSuccess(message, next) if next.source.toString.isEmpty =>
-      Left(WorkflowLexerError(s"""Error: input cannot be empty."""))
-    case NoSuccess(message, next) => Left(WorkflowLexerError(s"""Error at character "${next.first.toString}"."""))
-    case Success(result, next) => Right(result)
-  }
-}
+/**
+  * A pending "or" (join) operation.
+  * @param arg1 The first argument of the join.
+  * @param arg2 The second argument of the join.
+  */
+case class Or(arg1: QueryItemAST, arg2: QueryItemAST) extends QueryParserAST
 
 object QueryParser extends Parsers {
   override type Elem = ParserToken
@@ -48,32 +52,26 @@ object QueryParser extends Parsers {
 
   def orStatement: Parser[QueryParserAST] = positioned {
     (item ~ OrToken() ~ item) ^^ {
-      case Token(input1) ~ _ ~ Token(input2) => Or(Left(input1), Left(input2))
-      case Group(input1) ~ _ ~ Token(input2) => Or(Right(input1), Left(input2))
-      case Token(input1) ~ _ ~ Group(input2) => Or(Left(input1), Right(input2))
-      case Group(input1) ~ _ ~ Group(input2) => Or(Right(input1), Right(input2))
+      case (input1: QueryItemAST) ~ OrToken() ~ (input2: QueryItemAST) => Or(input1, input2)
     }
   }
 
   def andStatement: Parser[QueryParserAST] = positioned {
     (item ~ AndToken() ~ item) ^^ {
-      case Token(input1) ~ _ ~ Token(input2) => And(Left(input1), Left(input2))
-      case Group(input1) ~ _ ~ Token(input2) => And(Right(input1), Left(input2))
-      case Token(input1) ~ _ ~ Group(input2) => And(Left(input1), Right(input2))
-      case Group(input1) ~ _ ~ Group(input2) => And(Right(input1), Right(input2))
+      case (input1: QueryItemAST) ~ AndToken() ~ (input2: QueryItemAST) => And(input1, input2)
     }
   }
   def either: Parser[QueryParserAST] = {
     orStatement | andStatement
   }
 
-  def group: Parser[QueryParserAST] = {
+  def group: Parser[Group] = {
     (OpenParenToken() ~ either ~ CloseParenToken()) ^^ {
       case _ ~ either ~ _ => Group(either)
     }
   }
 
-  def item: Parser[QueryParserAST] = {
+  def item: Parser[QueryItemAST] = {
     token | group
   }
 
@@ -85,19 +83,17 @@ object QueryParser extends Parsers {
     orStatement | andStatement | item
   }
 
-  def apply(tokens: List[ParserToken]): Either[WorkflowLexerError, QueryParserAST] = {
+  def apply(tokens: List[ParserToken]): Either[ParserLexerError, QueryParserAST] = {
     val reader = new ParserTokenReader(tokens)
     root(reader) match {
-      case NoSuccess(err, next) => Left(WorkflowLexerError(s"""Error found at element "${next.first.toString}"."""))
-      case Success(result, next) => Right(result)
+      case NoSuccess(err, next) =>
+        Left(ParserLexerError(s"""query error Wrong token found at element "${next.first.toString}"."""))
+      case Success(result, next) if !next.atEnd =>
+        Left(ParserLexerError( s"""query error Wrong token at element: "${next.first.toString}"."""))
+      case Success(result, next) =>
+        Right(result)
     }
   }
 }
 
-
-sealed trait QueryParserAST extends Positional
-case class Token(token: String) extends QueryParserAST
-case class Group(content: QueryParserAST) extends QueryParserAST
-case class And(arg1: Either[String, QueryParserAST], arg2: Either[String, QueryParserAST]) extends QueryParserAST
-case class Or(arg1: Either[String, QueryParserAST], arg2: Either[String, QueryParserAST]) extends QueryParserAST
 
