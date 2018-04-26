@@ -1,4 +1,9 @@
-//#full-example
+/**
+  * Yummly programming test unit testing spec
+  *
+  * @author Emmanuel Eytan
+  */
+
 package com.regularoddity.yummly
 
 import org.scalatest.{BeforeAndAfterAll, FlatSpecLike, Matchers}

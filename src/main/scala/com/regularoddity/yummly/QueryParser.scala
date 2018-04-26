@@ -9,10 +9,13 @@ package com.regularoddity.yummly
 import scala.util.parsing.combinator.Parsers
 import scala.util.parsing.input.{NoPosition, Position, Positional, Reader}
 
+
 case class ParserLexerError(message: String) extends YummlyException
+
 
 sealed trait QueryParserAST extends Positional
 sealed trait QueryItemAST extends QueryParserAST
+
 
 /**
   * An individual token, part of a stored collection.
@@ -39,6 +42,7 @@ case class And(arg1: QueryItemAST, arg2: QueryItemAST) extends QueryParserAST
   * @param arg2 The second argument of the join.
   */
 case class Or(arg1: QueryItemAST, arg2: QueryItemAST) extends QueryParserAST
+
 
 object QueryParser extends Parsers {
   override type Elem = ParserToken
