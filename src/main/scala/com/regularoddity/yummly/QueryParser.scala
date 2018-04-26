@@ -87,7 +87,7 @@ object QueryParser extends Parsers {
     val reader = new ParserTokenReader(tokens)
     root(reader) match {
       case NoSuccess(err, next) =>
-        Left(ParserLexerError(s"""query error Wrong token found at element "${next.first.toString}"."""))
+        Left(ParserLexerError(s"""query error Wrong token at element: "${next.first.toString}"."""))
       case Success(result, next) if !next.atEnd =>
         Left(ParserLexerError( s"""query error Wrong token at element: "${next.first.toString}"."""))
       case Success(result, next) =>
