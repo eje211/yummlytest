@@ -86,7 +86,7 @@ class YummlyTestSpec(_system: ActorSystem)
     testProbe.expectMsg(500 millis, PrintMessage("query results 2"))
   }
 
-  "Overriding an index" should "make its content unavailable" in {
+  "Overwriting an index" should "make its content unavailable" in {
     val testProbe = TestProbe()
     val dataHandler = system.actorOf(DataHandler.props(testProbe.ref))
     dataHandler ! Store(2, "tomato soup cream".split(" ").map(s => Symbol(s)))
