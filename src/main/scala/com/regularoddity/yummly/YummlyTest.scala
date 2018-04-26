@@ -133,12 +133,12 @@ object YummlyTest extends App {
         |Enter query or index commands below.
         |Entering an empty line will quit the program.
         |""".stripMargin)
-    for (ln <- io.Source.stdin.getLines) {
-      if (ln.isEmpty) {
+    for (inputLine <- io.Source.stdin.getLines) {
+      if (inputLine.isEmpty) {
         printer ! PrintMessage("Goodbye!")
         System.exit(0)
       }
-      val action = determineAction(ln.split(" ").toSeq.map(_.trim).filter(_.nonEmpty))
+      val action = determineAction(inputLine.split(" ").toSeq.map(_.trim).filter(_.nonEmpty))
       action match {
         case Left(error: YummlyException) => printer ! PrintMessage(error.message)
         case Right(a: Action) => dataHandler ! a
@@ -177,7 +177,7 @@ object YummlyTest extends App {
               case Right(parsedQuery) => Right(Query(parsedQuery))
             }
         }
-      case _ => Left(YummlyIndexException("error The command enteered was not recognised."))
+      case _ => Left(YummlyIndexException("error The command entered was not recognised."))
     }
   }
 
