@@ -50,7 +50,7 @@ class DataHandler(printer: ActorRef) extends Actor {
   private val index = mutable.Map[Symbol, mutable.Set[Int]]()
   private val directory = mutable.Map[Int, Seq[Symbol]]()
 
-  final private def parseQuery(query: QueryParserAST, result: Set[Symbol]=Set[Symbol]()): Set[Int] = query match {
+  private def parseQuery(query: QueryParserAST): Set[Int] = query match {
     case Token(input: String) =>
       try {
         index(Symbol(input)).toSet
@@ -59,11 +59,11 @@ class DataHandler(printer: ActorRef) extends Actor {
           throw YummlyQueryException(s"""query error Token either not yet stored or removed: "$input".""")
       }
     case Group(operation: QueryParserAST) =>
-      parseQuery(operation, result)
+      parseQuery(operation)
     case And(arg1: QueryItemAST, arg2: QueryItemAST) =>
-      parseQuery(arg1, result) & parseQuery(arg2, result)
+      parseQuery(arg1) & parseQuery(arg2)
     case Or(arg1: QueryItemAST, arg2: QueryItemAST) =>
-      parseQuery(arg1, result) | parseQuery(arg2, result)
+      parseQuery(arg1) | parseQuery(arg2)
   }
 
   def receive: PartialFunction[Any, Unit] = {
