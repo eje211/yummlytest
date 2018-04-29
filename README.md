@@ -54,3 +54,20 @@ don't have a framework for that, so there are no automated tests for it.
 But I've tested those features myself and, as long as I've resisted the
 temptation to make quick changes without testing them before sending
 the link to the GitHub project, they should all still work.
+
+
+### Continuation-passing style
+
+The recursive function `parseQuery` is not tail-end recursive. It could
+be made tail-end recursive by using a continuation-passing style
+declaration. But there are several arguments against that. First of all,
+continuation passing style is much less readable than direct style.
+Second, continuation passing style is not magic: space saved on the stack
+ends up being used on the heap. Finally, the practical use case does not
+call for it. The queries will be entered by human users and are likely
+to be reasonably short. The recursion here won't be similar to sorting a
+very long list. It makes sense to just use a simple recursion and let it
+resolve directly. So, yes, this recursion will accumulate on the stack,
+but it is likely to always be very short. Futhermore, it occurs inside an
+actor, so we have full control over how many queries are computed at one
+time.
