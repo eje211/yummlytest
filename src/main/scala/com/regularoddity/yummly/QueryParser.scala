@@ -6,6 +6,7 @@
 
 package com.regularoddity.yummly
 
+import scala.util.Try
 import scala.util.parsing.combinator.Parsers
 import scala.util.parsing.input.{NoPosition, Position, Positional, Reader}
 
@@ -66,7 +67,7 @@ object QueryParser extends Parsers {
     }
   }
   def either: Parser[QueryParserAST] = {
-    orStatement | andStatement
+    orStatement | andStatement // | token // Uncommenting this will allow single-token groups, like `(salt)`
   }
 
   def group: Parser[Group] = {
@@ -90,10 +91,12 @@ object QueryParser extends Parsers {
   def apply(tokens: List[ParserToken]): Either[ParserLexerError, QueryParserAST] = {
     val reader = new ParserTokenReader(tokens)
     root(reader) match {
+      case NoSuccess(err, next) if next.atEnd =>
+        Left(ParserLexerError(s"query error Missing closing parenthesis."))
       case NoSuccess(err, next) =>
-        Left(ParserLexerError(s"""query error Wrong token at element: "${next.first.toString}"."""))
+        Left(ParserLexerError(s"""query error Wrong token near element: "${next.first.toString}"."""))
       case Success(result, next) if !next.atEnd =>
-        Left(ParserLexerError( s"""query error Wrong token at element: "${next.first.toString}"."""))
+        Left(ParserLexerError(s"""query error Wrong token near element: "${next.first.toString}"."""))
       case Success(result, next) =>
         Right(result)
     }

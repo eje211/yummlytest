@@ -71,3 +71,10 @@ resolve directly. So, yes, this recursion will accumulate on the stack,
 but it is likely to always be very short. Futhermore, it occurs inside an
 actor, so we have full control over how many queries are computed at one
 time.
+
+
+### Single-token groups
+
+Single-token groups such as the token `vinegar` in `salt|(vinegar)` are
+not part of the given spec. But they can be added be uncommenting the end
+of the specified line in `QueryParser.scala`.

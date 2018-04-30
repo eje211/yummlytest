@@ -47,19 +47,32 @@ class YummlyTestSpec(_system: ActorSystem)
   "An additional character in a query" should "return an error when parsed" in {
     val query = "(a|b)&c b"
     val tokens = QueryLexer(query).right.get
-    QueryParser(tokens).left.get shouldBe ParserLexerError("""query error Wrong token at element: "InputToken(b)".""")
+    QueryParser(tokens).left.get shouldBe ParserLexerError("""query error Wrong token near element: "InputToken(b)".""")
   }
 
   "An misplaced parenthesis in a query" should "return an error when parsed" in {
     val query = "(a)|b)&c"
     val tokens = QueryLexer(query).right.get
-    QueryParser(tokens).left.get shouldBe ParserLexerError("""query error Wrong token at element: "CloseParenToken()".""")
+    QueryParser(tokens).left.get shouldBe
+      ParserLexerError("""query error Wrong token near element: "CloseParenToken()".""")
   }
 
   "A query without enough parentheses" should "return an error when parsed" in {
     val query = "a|b&c"
     val tokens = QueryLexer(query).right.get
-    QueryParser(tokens).left.get shouldBe ParserLexerError("""query error Wrong token at element: "AndToken()".""")
+    QueryParser(tokens).left.get shouldBe ParserLexerError("""query error Wrong token near element: "AndToken()".""")
+  }
+
+  "A missing closing parenthesis around a short statement" should "trigger an error message" in {
+    val query = "(cream|salt"
+    val tokens = QueryLexer(query).right.get
+    QueryParser(tokens).left.get shouldBe ParserLexerError("query error Missing closing parenthesis.")
+  }
+
+  "A missing closing parenthesis around a long statement" should "trigger an error message" in {
+    val query = "(cherries|((cream|salt)&soup)"
+    val tokens = QueryLexer(query).right.get
+    QueryParser(tokens).left.get shouldBe ParserLexerError("query error Missing closing parenthesis.")
   }
 
   "Adding tokens to an index" should "return an ok message" in {
@@ -104,7 +117,7 @@ class YummlyTestSpec(_system: ActorSystem)
     dataHandler ! Store(2, "tomato soup cream".split(" ").map(s => Symbol(s)))
     dataHandler ! Store(3, "coffee sugar cream".split(" ").map(s => Symbol(s)))
     dataHandler ! Store(5, "cake cherries flour".split(" ").map(s => Symbol(s)))
-    dataHandler ! Store(8, "beef pototoes gravy salt".split(" ").map(s => Symbol(s)))
+    dataHandler ! Store(8, "beef potatoes gravy salt".split(" ").map(s => Symbol(s)))
     dataHandler ! Store(13, "soup celery onions salt potatoes garlic".split(" ").map(s => Symbol(s)))
     dataHandler ! Store(21, "coconut apples bananas".split(" ").map(s => Symbol(s)))
     dataHandler ! Query(QueryLexer("cherries|((cream|salt)&soup)").flatMap(l => QueryParser(l)).right.get)
